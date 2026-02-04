@@ -6,7 +6,7 @@ A real-time translation web application designed to facilitate communication bet
 
 This application enables seamless, real-time communication between doctors and patients who speak different languages. Built with modern web technologies, it provides instant translation, audio recording capabilities, and conversation management features to improve healthcare communication.
 
-**Live Demo:** [Will be added after Vercel deployment]
+**Live Demo:** https://nao-medichat.vercel.app/
 
 **Key Highlights:**
 - Real-time bidirectional translation (English ↔ Spanish)
