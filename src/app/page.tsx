@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Stethoscope, User, ArrowRight, Loader2, Copy, Pencil, Check, X, FileText, Search } from 'lucide-react'
+import { Stethoscope, User, ArrowRight, Loader2, Copy, Pencil, Check, X, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import SummaryPanel from '@/components/SummaryPanel'
 
 interface Conversation {
   id: string
@@ -28,7 +27,6 @@ export default function Home() {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [showSummaryForId, setShowSummaryForId] = useState<string | null>(null)
   const [conversationSearch, setConversationSearch] = useState('')
 
   const filteredConversations = useMemo(() => {
@@ -132,9 +130,27 @@ export default function Home() {
     }
   }
 
-  const openSummary = (convId: string, e: React.MouseEvent) => {
+  const deleteConversation = async (convId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setShowSummaryForId(convId)
+
+    if (!confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/conversations/${convId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        fetchConversations()
+      } else {
+        alert('Failed to delete conversation')
+      }
+    } catch (err) {
+      console.error('Failed to delete:', err)
+      alert('Failed to delete conversation')
+    }
   }
 
   const startRename = (convId: string, currentTitle: string, e: React.MouseEvent) => {
@@ -317,6 +333,9 @@ export default function Home() {
                             {conv.title && (
                               <div className="text-xs text-gray-400 truncate">{conv.code}</div>
                             )}
+                            <div className="text-xs text-gray-400 mt-1">
+                              {new Date(conv.updatedAt).toLocaleDateString()}
+                            </div>
                           </>
                         )}
                       </div>
@@ -341,18 +360,13 @@ export default function Home() {
                           >
                             <Pencil className="w-4 h-4 text-gray-600" />
                           </button>
-                          {conv._count.summaries > 0 && (
-                            <button
-                              onClick={(e) => openSummary(conv.id, e)}
-                              className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-100 rounded transition-opacity"
-                              title="View summary"
-                            >
-                              <FileText className="w-4 h-4 text-gray-600" />
-                            </button>
-                          )}
-                          <div className="text-xs text-gray-400 w-20 text-right">
-                            {new Date(conv.updatedAt).toLocaleDateString()}
-                          </div>
+                          <button
+                            onClick={(e) => deleteConversation(conv.id, e)}
+                            className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-opacity"
+                            title="Delete conversation"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
                         </div>
                       )}
                     </div>
@@ -431,13 +445,6 @@ export default function Home() {
           </p>
         </div>
       </div>
-
-      {showSummaryForId && (
-        <SummaryPanel
-          conversationId={showSummaryForId}
-          onClose={() => setShowSummaryForId(null)}
-        />
-      )}
     </div>
   )
 }

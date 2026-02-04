@@ -32,3 +32,33 @@ export async function PATCH(
     )
   }
 }
+
+// DELETE /api/conversations/[id] - Delete conversation
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Conversation ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Delete conversation (cascade deletes messages and summaries)
+    await prisma.conversation.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting conversation:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete conversation' },
+      { status: 500 }
+    )
+  }
+}
