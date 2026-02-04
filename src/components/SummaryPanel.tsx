@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { FileText, Loader2, X } from 'lucide-react'
 import { Button } from './ui/button'
 import { Summary } from '@/types'
@@ -12,10 +12,32 @@ interface SummaryPanelProps {
 
 export default function SummaryPanel({ conversationId, onClose }: SummaryPanelProps) {
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
   const [summary, setSummary] = useState<Summary | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const generateSummary = async () => {
+  useEffect(() => {
+    fetchExistingSummary()
+  }, [conversationId])
+
+  const fetchExistingSummary = async () => {
+    setFetching(true)
+    try {
+      const response = await fetch(`/api/summarize?conversationId=${conversationId}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data && data.length > 0) {
+          setSummary(data[0])
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching existing summary:', err)
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  const generateOrUpdateSummary = async () => {
     setLoading(true)
     setError(null)
     try {
@@ -53,13 +75,20 @@ export default function SummaryPanel({ conversationId, onClose }: SummaryPanelPr
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {!summary && !loading && (
+          {fetching && (
+            <div className="text-center py-8">
+              <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+              <p className="text-gray-600">Loading summary...</p>
+            </div>
+          )}
+
+          {!fetching && !summary && !loading && (
             <div className="text-center py-8">
               <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-600 mb-4">
                 Generate an AI-powered summary of this conversation
               </p>
-              <Button onClick={generateSummary}>
+              <Button onClick={generateOrUpdateSummary}>
                 Generate Summary
               </Button>
             </div>
@@ -68,7 +97,7 @@ export default function SummaryPanel({ conversationId, onClose }: SummaryPanelPr
           {loading && (
             <div className="text-center py-8">
               <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">Generating summary...</p>
+              <p className="text-gray-600">{summary ? 'Updating' : 'Generating'} summary...</p>
             </div>
           )}
 
@@ -78,7 +107,7 @@ export default function SummaryPanel({ conversationId, onClose }: SummaryPanelPr
             </div>
           )}
 
-          {summary && (
+          {!loading && summary && (
             <div className="space-y-6">
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">Summary</h3>
@@ -133,8 +162,17 @@ export default function SummaryPanel({ conversationId, onClose }: SummaryPanelPr
                 </div>
               )}
 
-              <div className="text-xs text-gray-500 pt-4 border-t">
-                Generated on {new Date(summary.createdAt).toLocaleString()}
+              <div className="pt-4 border-t space-y-3">
+                <div className="text-xs text-gray-500">
+                  Last updated: {new Date(summary.createdAt).toLocaleString()}
+                </div>
+                <Button
+                  onClick={generateOrUpdateSummary}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Update Summary
+                </Button>
               </div>
             </div>
           )}

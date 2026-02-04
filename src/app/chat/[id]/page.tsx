@@ -12,7 +12,7 @@ export default function ChatPage() {
 
   return (
     <div
-      className="h-screen flex flex-col bg-cover bg-center bg-no-repeat bg-fixed"
+      className="h-screen overflow-hidden flex flex-col bg-cover bg-center bg-no-repeat bg-fixed"
       style={{ backgroundImage: 'url(/background.png)' }}
     >
       <div className="bg-white border-b px-4 py-2 flex items-center gap-4">
@@ -25,7 +25,7 @@ export default function ChatPage() {
         </Button>
         <span className="text-sm text-gray-600">Back to conversations</span>
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <ChatInterface conversationId={conversationId} />
       </div>
     </div>

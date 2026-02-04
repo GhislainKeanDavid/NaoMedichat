@@ -158,12 +158,17 @@ export default function ChatInterface({ conversationId }: ChatInterfaceProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-transparent">
+    <div className="flex flex-col h-full bg-transparent">
       {/* Header */}
       <div className="bg-white border-b p-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 max-w-4xl mx-auto">
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <img
+                src="/logo.png"
+                alt="NaoMedichat"
+                className="h-8 w-auto"
+              />
               <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getRoleColor()}`}>
                 You are: {getRoleDisplay()}
               </span>
@@ -187,7 +192,7 @@ export default function ChatInterface({ conversationId }: ChatInterfaceProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
           {loading && messages.length === 0 ? (
             <div className="text-center py-8">

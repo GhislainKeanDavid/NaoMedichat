@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateSummary } from '@/lib/openai'
 
-// POST /api/summarize - Generate AI summary
+// POST /api/summarize - Generate or update AI summary
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -31,14 +31,32 @@ export async function POST(request: NextRequest) {
     // Generate summary using OpenAI
     const { summary, medicalPoints } = await generateSummary(messages)
 
-    // Save the summary
-    const summaryRecord = await prisma.summary.create({
-      data: {
-        conversationId,
-        content: summary,
-        medicalPoints,
-      },
+    // Check if summary already exists
+    const existingSummary = await prisma.summary.findFirst({
+      where: { conversationId },
     })
+
+    let summaryRecord
+
+    if (existingSummary) {
+      // Update existing summary
+      summaryRecord = await prisma.summary.update({
+        where: { id: existingSummary.id },
+        data: {
+          content: summary,
+          medicalPoints,
+        },
+      })
+    } else {
+      // Create new summary
+      summaryRecord = await prisma.summary.create({
+        data: {
+          conversationId,
+          content: summary,
+          medicalPoints,
+        },
+      })
+    }
 
     return NextResponse.json(summaryRecord)
   } catch (error) {
