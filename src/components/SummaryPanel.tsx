@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText, Loader2, X } from 'lucide-react'
+import { FileText, Loader2, X, Copy, Check } from 'lucide-react'
 import { Button } from './ui/button'
 import { Summary } from '@/types'
 
@@ -15,6 +15,7 @@ export default function SummaryPanel({ conversationId, onClose }: SummaryPanelPr
   const [fetching, setFetching] = useState(true)
   const [summary, setSummary] = useState<Summary | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     fetchExistingSummary()
@@ -61,6 +62,37 @@ export default function SummaryPanel({ conversationId, onClose }: SummaryPanelPr
     }
   }
 
+  const copySummary = async () => {
+    if (!summary) return
+
+    try {
+      let text = `CONVERSATION SUMMARY\n\n${summary.content}\n\n`
+
+      if (summary.medicalPoints) {
+        if (summary.medicalPoints.symptoms && summary.medicalPoints.symptoms.length > 0) {
+          text += `SYMPTOMS:\n${summary.medicalPoints.symptoms.map((s: string) => `• ${s}`).join('\n')}\n\n`
+        }
+        if (summary.medicalPoints.diagnoses && summary.medicalPoints.diagnoses.length > 0) {
+          text += `DIAGNOSES:\n${summary.medicalPoints.diagnoses.map((d: string) => `• ${d}`).join('\n')}\n\n`
+        }
+        if (summary.medicalPoints.medications && summary.medicalPoints.medications.length > 0) {
+          text += `MEDICATIONS:\n${summary.medicalPoints.medications.map((m: string) => `• ${m}`).join('\n')}\n\n`
+        }
+        if (summary.medicalPoints.followUps && summary.medicalPoints.followUps.length > 0) {
+          text += `FOLLOW-UPS:\n${summary.medicalPoints.followUps.map((f: string) => `• ${f}`).join('\n')}\n\n`
+        }
+      }
+
+      text += `Generated: ${new Date(summary.createdAt).toLocaleString()}`
+
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy summary:', err)
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -69,9 +101,25 @@ export default function SummaryPanel({ conversationId, onClose }: SummaryPanelPr
             <FileText className="w-5 h-5 text-blue-600" />
             <h2 className="text-xl font-semibold">Conversation Summary</h2>
           </div>
-          <Button onClick={onClose} variant="ghost" size="icon">
-            <X className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {summary && (
+              <Button
+                onClick={copySummary}
+                variant="outline"
+                size="icon"
+                title="Copy summary"
+              >
+                {copied ? (
+                  <Check className="w-5 h-5 text-green-600" />
+                ) : (
+                  <Copy className="w-5 h-5" />
+                )}
+              </Button>
+            )}
+            <Button onClick={onClose} variant="ghost" size="icon">
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">

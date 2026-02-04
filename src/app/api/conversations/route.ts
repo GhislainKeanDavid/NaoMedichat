@@ -12,7 +12,7 @@ export async function GET() {
           orderBy: { timestamp: 'desc' },
         },
         _count: {
-          select: { messages: true },
+          select: { messages: true, summaries: true },
         },
       },
     })

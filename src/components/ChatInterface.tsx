@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Send, Loader2, FileText } from 'lucide-react'
+import { Send, Loader2, FileText, Search, X } from 'lucide-react'
 import { Message } from '@/types'
 import MessageBubble from './MessageBubble'
 import AudioRecorder from './AudioRecorder'
@@ -24,11 +24,23 @@ export default function ChatInterface({ conversationId }: ChatInterfaceProps) {
   const [sending, setSending] = useState(false)
   const [inputText, setInputText] = useState('')
   const [showSummary, setShowSummary] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery.trim()) return messages
+
+    const query = searchQuery.toLowerCase()
+    return messages.filter(msg =>
+      msg.originalText?.toLowerCase().includes(query) ||
+      msg.translatedText?.toLowerCase().includes(query)
+    )
+  }, [messages, searchQuery])
 
   useEffect(() => {
     fetchMessages()
-    setupRealtimeSubscription()
+    const cleanup = setupRealtimeSubscription()
+    return cleanup
   }, [conversationId])
 
   useEffect(() => {
@@ -161,33 +173,52 @@ export default function ChatInterface({ conversationId }: ChatInterfaceProps) {
     <div className="flex flex-col h-full bg-transparent">
       {/* Header */}
       <div className="bg-white border-b p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 max-w-4xl mx-auto">
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <img
-                src="/logo.png"
-                alt="NaoMedichat"
-                className="h-8 w-auto"
-              />
-              <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getRoleColor()}`}>
-                You are: {getRoleDisplay()}
-              </span>
-              <span className="text-xs sm:text-sm text-gray-600">
-                Code: <span className="font-mono font-semibold">{conversationCode}</span>
-              </span>
+        <div className="max-w-4xl mx-auto space-y-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <img
+                  src="/logo.png"
+                  alt="NaoMedichat"
+                  className="h-8 w-auto"
+                />
+                <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getRoleColor()}`}>
+                  You are: {getRoleDisplay()}
+                </span>
+                <span className="text-xs sm:text-sm text-gray-600">
+                  Code: <span className="font-mono font-semibold">{conversationCode}</span>
+                </span>
+              </div>
             </div>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">
-              {messages.length} message{messages.length !== 1 ? 's' : ''}
-            </p>
+            <Button
+              onClick={() => setShowSummary(true)}
+              variant="outline"
+              className="flex items-center gap-2 text-xs sm:text-sm"
+            >
+              <FileText className="w-4 h-4" />
+              Summary
+            </Button>
           </div>
-          <Button
-            onClick={() => setShowSummary(true)}
-            variant="outline"
-            className="flex items-center gap-2 text-xs sm:text-sm"
-          >
-            <FileText className="w-4 h-4" />
-            Summary
-          </Button>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search messages..."
+              className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -210,8 +241,16 @@ export default function ChatInterface({ conversationId }: ChatInterfaceProps) {
                   : 'You will type in Spanish → Doctor sees English'}
               </p>
             </div>
+          ) : searchQuery && filteredMessages.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 mb-2">No messages found</p>
+              <p className="text-sm text-gray-400">
+                Try searching with different keywords
+              </p>
+            </div>
           ) : (
-            messages.map((message) => (
+            filteredMessages.map((message) => (
               <MessageBubble key={message.id} message={message} currentUserRole={role} />
             ))
           )}

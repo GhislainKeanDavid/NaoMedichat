@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Stethoscope, User, ArrowRight, Loader2 } from 'lucide-react'
+import { Stethoscope, User, ArrowRight, Loader2, Copy, Pencil, Check, X, FileText, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import SummaryPanel from '@/components/SummaryPanel'
 
 interface Conversation {
   id: string
@@ -12,6 +13,7 @@ interface Conversation {
   updatedAt: string
   _count: {
     messages: number
+    summaries: number
   }
 }
 
@@ -23,6 +25,21 @@ export default function Home() {
   const [error, setError] = useState('')
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loadingConversations, setLoadingConversations] = useState(false)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [newTitle, setNewTitle] = useState('')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [showSummaryForId, setShowSummaryForId] = useState<string | null>(null)
+  const [conversationSearch, setConversationSearch] = useState('')
+
+  const filteredConversations = useMemo(() => {
+    if (!conversationSearch.trim()) return conversations
+
+    const query = conversationSearch.toLowerCase()
+    return conversations.filter(conv =>
+      conv.code.toLowerCase().includes(query) ||
+      conv.title?.toLowerCase().includes(query)
+    )
+  }, [conversations, conversationSearch])
 
   useEffect(() => {
     if (selectedRole === 'DOCTOR') {
@@ -104,6 +121,53 @@ export default function Home() {
     }
   }
 
+  const copyConversationCode = async (code: string, convId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopiedId(convId)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const openSummary = (convId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowSummaryForId(convId)
+  }
+
+  const startRename = (convId: string, currentTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRenamingId(convId)
+    setNewTitle(currentTitle || '')
+  }
+
+  const cancelRename = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRenamingId(null)
+    setNewTitle('')
+  }
+
+  const saveRename = async (convId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const response = await fetch(`/api/conversations/${convId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle.trim() || null }),
+      })
+
+      if (response.ok) {
+        fetchConversations()
+        setRenamingId(null)
+        setNewTitle('')
+      }
+    } catch (err) {
+      console.error('Failed to rename:', err)
+    }
+  }
+
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat bg-fixed"
@@ -178,32 +242,130 @@ export default function Home() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Your Conversations
             </label>
+
+            {/* Search Bar */}
+            {conversations.length > 0 && (
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={conversationSearch}
+                  onChange={(e) => setConversationSearch(e.target.value)}
+                  placeholder="Search conversations..."
+                  className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {conversationSearch && (
+                  <button
+                    onClick={() => setConversationSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {loadingConversations ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
               </div>
             ) : conversations.length > 0 ? (
-              <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                {conversations.map((conv) => (
-                  <button
+              filteredConversations.length > 0 ? (
+                <div className="max-h-[228px] overflow-y-auto border border-gray-200 rounded-lg">
+                  {filteredConversations.map((conv) => (
+                  <div
                     key={conv.id}
-                    onDoubleClick={() => openConversation(conv.id, conv.code)}
-                    className="w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-blue-50 transition-colors cursor-pointer"
+                    onDoubleClick={() => renamingId !== conv.id && openConversation(conv.id, conv.code)}
+                    className="group w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-blue-50 transition-colors cursor-pointer relative"
                   >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="font-medium text-gray-800">{conv.code}</div>
-                        <div className="text-xs text-gray-500">
-                          {conv._count.messages} message{conv._count.messages !== 1 ? 's' : ''}
+                    <div className="flex justify-between items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        {renamingId === conv.id ? (
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={newTitle}
+                              onChange={(e) => setNewTitle(e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') saveRename(conv.id, e as any)
+                                if (e.key === 'Escape') cancelRename(e as any)
+                              }}
+                              placeholder="Enter conversation name"
+                              className="flex-1 px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              autoFocus
+                            />
+                            <button
+                              onClick={(e) => saveRename(conv.id, e)}
+                              className="p-1 hover:bg-green-100 rounded"
+                              title="Save"
+                            >
+                              <Check className="w-4 h-4 text-green-600" />
+                            </button>
+                            <button
+                              onClick={cancelRename}
+                              className="p-1 hover:bg-red-100 rounded"
+                              title="Cancel"
+                            >
+                              <X className="w-4 h-4 text-red-600" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="font-medium text-gray-800 truncate">
+                              {conv.title || conv.code}
+                            </div>
+                            {conv.title && (
+                              <div className="text-xs text-gray-400 truncate">{conv.code}</div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      {renamingId !== conv.id && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => copyConversationCode(conv.code, conv.id, e)}
+                            className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-100 rounded transition-opacity"
+                            title="Copy conversation code"
+                          >
+                            {copiedId === conv.id ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4 text-gray-600" />
+                            )}
+                          </button>
+                          <button
+                            onClick={(e) => startRename(conv.id, conv.title || conv.code, e)}
+                            className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-100 rounded transition-opacity"
+                            title="Rename conversation"
+                          >
+                            <Pencil className="w-4 h-4 text-gray-600" />
+                          </button>
+                          {conv._count.summaries > 0 && (
+                            <button
+                              onClick={(e) => openSummary(conv.id, e)}
+                              className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-100 rounded transition-opacity"
+                              title="View summary"
+                            >
+                              <FileText className="w-4 h-4 text-gray-600" />
+                            </button>
+                          )}
+                          <div className="text-xs text-gray-400 w-20 text-right">
+                            {new Date(conv.updatedAt).toLocaleDateString()}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        {new Date(conv.updatedAt).toLocaleDateString()}
-                      </div>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
+              ) : (
+                <div className="text-sm text-gray-500 text-center py-4 border border-gray-200 rounded-lg">
+                  <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p>No conversations found</p>
+                  <p className="text-xs text-gray-400 mt-1">Try searching with different keywords</p>
+                </div>
+              )
             ) : (
               <div className="text-sm text-gray-500 text-center py-4 border border-gray-200 rounded-lg">
                 No conversations yet. Generate a new ID below.
@@ -263,15 +425,19 @@ export default function Home() {
 
         {/* Info */}
         <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-600 text-center mb-4">
+          <p className="text-xs text-gray-600 text-center">
             <strong>How to test:</strong> Open two browser windows, select different
             roles, and use the same conversation ID to test
           </p>
-          <p className="text-sm text-center text-gray-600">
-            Real-time translation for doctor-patient communication
-          </p>
         </div>
       </div>
+
+      {showSummaryForId && (
+        <SummaryPanel
+          conversationId={showSummaryForId}
+          onClose={() => setShowSummaryForId(null)}
+        />
+      )}
     </div>
   )
 }
