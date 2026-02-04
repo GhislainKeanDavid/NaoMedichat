@@ -1,4 +1,5 @@
-# Healthcare Doctor-Patient Translation Application
+# NaoMedichat, the care right where you're at
+Healthcare Doctor-Patient Translation Application
 
 A real-time translation web application designed to facilitate communication between English-speaking doctors and Spanish-speaking patients in healthcare settings.
 
