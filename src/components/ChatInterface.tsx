@@ -158,27 +158,27 @@ export default function ChatInterface({ conversationId }: ChatInterfaceProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-transparent">
       {/* Header */}
       <div className="bg-white border-b p-4">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <div>
-            <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getRoleColor()}`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 max-w-4xl mx-auto">
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getRoleColor()}`}>
                 You are: {getRoleDisplay()}
               </span>
-              <span className="text-sm text-gray-600">
-                Conversation: <span className="font-mono font-semibold">{conversationCode}</span>
+              <span className="text-xs sm:text-sm text-gray-600">
+                Code: <span className="font-mono font-semibold">{conversationCode}</span>
               </span>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
               {messages.length} message{messages.length !== 1 ? 's' : ''}
             </p>
           </div>
           <Button
             onClick={() => setShowSummary(true)}
             variant="outline"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-xs sm:text-sm"
           >
             <FileText className="w-4 h-4" />
             Summary

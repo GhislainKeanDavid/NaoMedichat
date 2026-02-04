@@ -29,7 +29,7 @@ export default function MessageBubble({ message, currentUserRole }: MessageBubbl
 
       <div className={`flex-1 ${isMyMessage ? 'text-right' : 'text-left'}`}>
         <div
-          className={`inline-block max-w-[80%] rounded-lg p-4 ${
+          className={`inline-block max-w-[90%] sm:max-w-[80%] rounded-lg p-3 sm:p-4 ${
             isMyMessage
               ? 'bg-blue-600 text-white'
               : isDoctor

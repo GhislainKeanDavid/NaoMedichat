@@ -1,9 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Stethoscope, User, ArrowRight } from 'lucide-react'
+import { Stethoscope, User, ArrowRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+
+interface Conversation {
+  id: string
+  code: string
+  title: string | null
+  updatedAt: string
+  _count: {
+    messages: number
+  }
+}
 
 export default function Home() {
   const router = useRouter()
@@ -11,10 +21,40 @@ export default function Home() {
   const [conversationCode, setConversationCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [loadingConversations, setLoadingConversations] = useState(false)
+
+  useEffect(() => {
+    if (selectedRole === 'DOCTOR') {
+      fetchConversations()
+    } else {
+      setConversations([])
+    }
+  }, [selectedRole])
+
+  const fetchConversations = async () => {
+    setLoadingConversations(true)
+    try {
+      const response = await fetch('/api/conversations')
+      if (response.ok) {
+        const data = await response.json()
+        setConversations(data)
+      }
+    } catch (err) {
+      console.error('Error fetching conversations:', err)
+    } finally {
+      setLoadingConversations(false)
+    }
+  }
 
   const generateCode = () => {
     const code = 'CONV-' + Math.random().toString(36).substring(2, 8).toUpperCase()
     setConversationCode(code)
+  }
+
+  const openConversation = async (conversationId: string, code: string) => {
+    if (!selectedRole) return
+    router.push(`/chat/${conversationId}?role=${selectedRole}&code=${code}`)
   }
 
   const startConversation = async () => {
@@ -65,14 +105,17 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{ backgroundImage: 'url(/background.png)' }}
+    >
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Healthcare Translator
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
+            NaoMedichat
           </h1>
-          <p className="text-gray-600">
-            Real-time translation for doctor-patient communication
+          <p className="text-blue-600 font-medium italic">
+            Care right where you're at
           </p>
         </div>
 
@@ -84,7 +127,7 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setSelectedRole('DOCTOR')}
-              className={`p-6 rounded-lg border-2 transition-all ${
+              className={`p-4 sm:p-6 rounded-lg border-2 transition-all ${
                 selectedRole === 'DOCTOR'
                   ? 'border-blue-600 bg-blue-50'
                   : 'border-gray-200 hover:border-blue-300'
@@ -103,7 +146,7 @@ export default function Home() {
 
             <button
               onClick={() => setSelectedRole('PATIENT')}
-              className={`p-6 rounded-lg border-2 transition-all ${
+              className={`p-4 sm:p-6 rounded-lg border-2 transition-all ${
                 selectedRole === 'PATIENT'
                   ? 'border-green-600 bg-green-50'
                   : 'border-gray-200 hover:border-green-300'
@@ -121,6 +164,46 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        {/* Existing Conversations (Doctor Only) */}
+        {selectedRole === 'DOCTOR' && (
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Your Conversations
+            </label>
+            {loadingConversations ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+              </div>
+            ) : conversations.length > 0 ? (
+              <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+                {conversations.map((conv) => (
+                  <button
+                    key={conv.id}
+                    onDoubleClick={() => openConversation(conv.id, conv.code)}
+                    className="w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-blue-50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium text-gray-800">{conv.code}</div>
+                        <div className="text-xs text-gray-500">
+                          {conv._count.messages} message{conv._count.messages !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(conv.updatedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500 text-center py-4 border border-gray-200 rounded-lg">
+                No conversations yet. Generate a new ID below.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Conversation ID */}
         <div className="mb-6">
@@ -173,9 +256,12 @@ export default function Home() {
 
         {/* Info */}
         <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-600 text-center">
-            <strong>Solo Testing:</strong> Open two browser windows, select different
+          <p className="text-xs text-gray-600 text-center mb-4">
+            <strong>How to test:</strong> Open two browser windows, select different
             roles, and use the same conversation ID to test
+          </p>
+          <p className="text-sm text-center text-gray-600">
+            Real-time translation for doctor-patient communication
           </p>
         </div>
       </div>

@@ -11,7 +11,10 @@ export default function ChatPage() {
   const conversationId = params.id as string
 
   return (
-    <div className="h-screen flex flex-col">
+    <div
+      className="h-screen flex flex-col bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{ backgroundImage: 'url(/background.png)' }}
+    >
       <div className="bg-white border-b px-4 py-2 flex items-center gap-4">
         <Button
           onClick={() => router.push('/')}
